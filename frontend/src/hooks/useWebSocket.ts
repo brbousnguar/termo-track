@@ -29,7 +29,7 @@ export function useWebSocket(url: string) {
               temperature: msg.temperature,
               humidity: msg.humidity,
               battery: msg.battery,
-              device: msg.device,
+              device: msg.device ?? msg.device_name,
               timestamp: msg.timestamp,
             });
           }
