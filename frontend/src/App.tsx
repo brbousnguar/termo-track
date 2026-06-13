@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ComparisonCard } from "./components/ComparisonCard";
 import { HistoryChart } from "./components/HistoryChart";
 import { LiveReadingCard } from "./components/LiveReading";
 import { StatsCard } from "./components/StatsCard";
@@ -38,6 +39,7 @@ export default function App() {
 
       <main style={styles.main}>
         <LiveReadingCard reading={reading} connected={connected} />
+        <ComparisonCard reading={reading} />
         <StatsCard hours={hours} />
         <HistoryChart hours={hours} refreshTick={refreshTick} />
       </main>
