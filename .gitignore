@@ -1,0 +1,18 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Local data / runtime
+backend/readings.db
+*.db
+
+# Editor / agent / tooling
+.claude/
+.playwright-mcp/
+
+# Test artifacts / screenshots
+*.png
