@@ -19,13 +19,51 @@ FastAPI server streams them to a React dashboard.
 
 ## Architecture
 
-```
-ThermoPro sensor ──BLE adv──▶ scanner_daemon.py ──▶ readings.db (SQLite)
-                                                          │
-                                          server.py (FastAPI) ──REST + WS──▶ React/Vite dashboard
+```mermaid
+flowchart LR
+    sensor["🌡️ ThermoPro sensor<br/>(TP35x, BLE)"]
+
+    subgraph host["Host machine"]
+        scanner["scanner_daemon.py<br/>BLE listener"]
+        ble["ble_scanner.py<br/>advert decoder"]
+        dbmod["database.py<br/>shared access layer"]
+        db[("readings.db<br/>SQLite")]
+        api["server.py — FastAPI<br/>:8765 · REST + WS"]
+        mcp["mcp_server.py — FastMCP<br/>:8675 /mcp · or stdio"]
+        web["nginx / Vite dev<br/>:8088 (or :5173)<br/>serves SPA + proxies /api,/ws"]
+    end
+
+    subgraph browser["Browser — React dashboard"]
+        ui["Dashboard UI"]
+    end
+
+    subgraph ext["External keyless APIs"]
+        meteo["api.open-meteo.com<br/>outside weather"]
+        geo["api.bigdatacloud.net<br/>reverse geocode"]
+    end
+
+    clients["MCP clients<br/>Claude Desktop / Code"]
+
+    sensor -- "BLE advertisements" --> scanner
+    scanner -- "decode" --> ble
+    scanner -- "write" --> dbmod
+    dbmod --> db
+    api -- "read / poll" --> dbmod
+    mcp -- "read-only" --> dbmod
+
+    ui -- "GET /api/*" --> web
+    ui -- "WS /ws (live)" --> web
+    web -- "proxy /api + /ws" --> api
+    ui -- "browser geolocation + fetch" --> meteo
+    ui -- "fetch" --> geo
+
+    clients -- "MCP (stdio / HTTP via mcp-remote)" --> mcp
 ```
 
-The scanner and API server are independent processes that share the SQLite DB.
+The scanner, API server, and MCP server are **independent processes** that
+communicate only through the shared SQLite DB — the MCP server has no dependency
+on the FastAPI server. The browser also talks directly to two keyless public
+APIs for the indoor-vs-outdoor comparison.
 
 ```
 backend/
