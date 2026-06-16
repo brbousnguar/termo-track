@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ComparisonCard } from "./components/ComparisonCard";
 import { HistoryChart } from "./components/HistoryChart";
+import { InsideOutsideChart } from "./components/InsideOutsideChart";
 import { LiveReadingCard } from "./components/LiveReading";
 import { StatsCard } from "./components/StatsCard";
 import { useWebSocket } from "./hooks/useWebSocket";
@@ -41,6 +42,7 @@ export default function App() {
         <LiveReadingCard reading={reading} connected={connected} />
         <ComparisonCard reading={reading} />
         <StatsCard hours={hours} />
+        <InsideOutsideChart hours={hours} refreshTick={refreshTick} />
         <HistoryChart hours={hours} refreshTick={refreshTick} />
       </main>
     </div>
