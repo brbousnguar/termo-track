@@ -56,6 +56,7 @@ flowchart LR
     web -- "proxy /api + /ws" --> api
     ui -- "browser geolocation + fetch" --> meteo
     ui -- "fetch" --> geo
+    mcp -- "outside weather" --> meteo
 
     clients -- "MCP (stdio / HTTP via mcp-remote)" --> mcp
 ```
@@ -165,22 +166,37 @@ docker compose down
 serves the sensor data over the **Model Context Protocol**, so Claude (Desktop /
 Code) and any other MCP client can query your room conditions in natural language:
 
-| Tool                  | What it returns                                        |
-| --------------------- | ------------------------------------------------------ |
-| `get_current_reading` | latest temperature + humidity + a comfort label        |
-| `get_sensor_history`  | readings over the last *N* hours (default 24, max 168) |
-| `get_sensor_stats`    | min / max / avg temperature & humidity over *N* hours  |
-| `get_comfort_level`   | comfort assessment + a tip (heat / cool / humidify …)  |
+| Tool                            | What it returns                                              |
+| ------------------------------- | ----------------------------------------------------------- |
+| `get_current_reading`           | latest temperature + humidity + a comfort label             |
+| `get_sensor_history`            | readings over the last *N* hours (default 24, max 168)      |
+| `get_sensor_stats`              | min / max / avg temperature & humidity over *N* hours       |
+| `get_comfort_level`             | comfort assessment + a tip (heat / cool / humidify …)       |
+| `get_outside_weather`           | current outside temperature + humidity (Open-Meteo, keyless)|
+| `get_indoor_outdoor_comparison` | indoor vs outside readings + the delta and a plain summary  |
 
-It reads the same `data/readings.db` the scanner writes — it has **no dependency
-on the FastAPI server**. Transport is chosen via env vars:
+The sensor tools read the same `data/readings.db` the scanner writes — they have
+**no dependency on the FastAPI server**. The two weather tools fetch live
+conditions from [Open-Meteo](https://open-meteo.com) so the model can compare your
+room against outside (the same comparison the dashboard shows). **No location
+config is needed** — the server figures out where the host is from its network and
+pulls the weather for that location automatically. Transport and (optional)
+location overrides are env vars:
 
-| Env var         | Default     | Purpose                                        |
-| --------------- | ----------- | ---------------------------------------------- |
-| `MCP_TRANSPORT` | `stdio`     | `stdio` (local clients) or `streamable-http`   |
-| `MCP_HOST`      | `127.0.0.1` | bind address for HTTP mode                     |
-| `MCP_PORT`      | `8675`      | port for HTTP mode (endpoint at `/mcp`)        |
-| `DB_PATH`       | —           | path to the shared SQLite DB                   |
+| Env var         | Default     | Purpose                                            |
+| --------------- | ----------- | -------------------------------------------------- |
+| `MCP_TRANSPORT` | `stdio`     | `stdio` (local clients) or `streamable-http`       |
+| `MCP_HOST`      | `127.0.0.1` | bind address for HTTP mode                         |
+| `MCP_PORT`      | `8675`      | port for HTTP mode (endpoint at `/mcp`)            |
+| `DB_PATH`       | —           | path to the shared SQLite DB                       |
+| `LATITUDE`      | auto (IP)   | *optional* — pin a location instead of auto-detect |
+| `LONGITUDE`     | auto (IP)   | *optional* — paired with `LATITUDE`                |
+| `LOCATION_NAME` | auto        | *optional* — overrides the displayed place name    |
+
+> Location is auto-detected from the host's public IP (≈ city-level — enough for
+> outside weather). The dashboard, running in your browser, uses precise GPS
+> geolocation instead. Only set `LATITUDE`/`LONGITUDE` if you want to override the
+> auto-detected spot.
 
 ### Local (same machine) — stdio
 

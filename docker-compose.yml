@@ -47,6 +47,11 @@ services:
       MCP_HOST: 0.0.0.0
       MCP_PORT: 8675
       DB_PATH: /data/readings.db
+      # Outside weather location. Pinned to Nantes, France. (If these are unset,
+      # the server auto-detects the location from the host's public IP instead.)
+      LATITUDE: "47.2184"
+      LONGITUDE: "-1.5536"
+      LOCATION_NAME: "Nantes"
     volumes:
       - ./data:/data:ro
     ports:
