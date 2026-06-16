@@ -9,6 +9,7 @@ node_modules/
 # Local data / runtime
 backend/readings.db
 *.db
+*.log
 
 # Editor / agent / tooling
 .claude/

@@ -33,3 +33,22 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+  # MCP server — exposes sensor data over the Model Context Protocol (HTTP).
+  # Reads the same ./data/readings.db (read-only); connect clients to
+  # http://localhost:8675/mcp. Local stdio clients (Claude Desktop / Claude
+  # Code) don't need this container — they spawn mcp_server.py directly.
+  mcp:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.mcp
+    environment:
+      MCP_TRANSPORT: streamable-http
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8675
+      DB_PATH: /data/readings.db
+    volumes:
+      - ./data:/data:ro
+    ports:
+      - "8675:8675"
+    restart: unless-stopped

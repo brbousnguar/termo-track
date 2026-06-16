@@ -6,11 +6,19 @@ Exposes sensor history to Claude so you can ask questions like:
   "Is it getting hotter or cooler today?"
   "What's the comfort level right now?"
 
-Run via: python mcp_server.py
-Configure in ~/.claude/claude_desktop_config.json or .claude/mcp.json.
+Transport is selectable via env vars (defaults to stdio for local clients):
+
+  MCP_TRANSPORT=stdio            python mcp_server.py   # Claude Desktop / Claude Code
+  MCP_TRANSPORT=streamable-http  python mcp_server.py   # always-on HTTP service
+
+For HTTP, MCP_HOST (default 127.0.0.1) and MCP_PORT (default 8675) control the
+bind address; the endpoint is served at http://<host>:<port>/mcp.
+
+Configure stdio in ~/.claude/claude_desktop_config.json or a project .mcp.json.
 """
 
 import asyncio
+import os
 import sys
 from pathlib import Path
 
@@ -21,7 +29,11 @@ from mcp.server.fastmcp import FastMCP
 
 from database import get_history, get_latest, get_stats, init_db
 
-mcp = FastMCP("termo-track")
+mcp = FastMCP(
+    "termo-track",
+    host=os.getenv("MCP_HOST", "127.0.0.1"),
+    port=int(os.getenv("MCP_PORT", "8675")),
+)
 
 
 def _comfort_label(temp: float, humidity: float) -> str:
@@ -101,4 +113,5 @@ async def get_comfort_level() -> dict:
 
 
 if __name__ == "__main__":
-    mcp.run()
+    transport = os.getenv("MCP_TRANSPORT", "stdio")
+    mcp.run(transport=transport)
