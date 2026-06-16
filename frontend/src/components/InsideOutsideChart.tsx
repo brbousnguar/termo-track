@@ -19,6 +19,7 @@ interface Row {
 interface Props {
   hours: number;
   refreshTick: number;
+  accent: string;
 }
 
 interface Point {
@@ -40,18 +41,10 @@ const TooltipContent = ({ active, payload, label }: any) => {
   const both = typeof inside === "number" && typeof outside === "number";
   const diff = both ? inside - outside : null;
   return (
-    <div
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        borderRadius: 8,
-        padding: "10px 14px",
-        fontSize: 13,
-      }}
-    >
-      <div style={{ color: "var(--muted)", marginBottom: 6 }}>{fmtTick(label)}</div>
+    <div className="chart-tip">
+      <div className="chart-tip-label">{fmtTick(label)}</div>
       {typeof inside === "number" && (
-        <div style={{ color: "var(--orange)" }}>
+        <div style={{ color: "var(--text)" }}>
           Inside: <strong>{inside.toFixed(1)}°C</strong>
         </div>
       )}
@@ -70,7 +63,7 @@ const TooltipContent = ({ active, payload, label }: any) => {
   );
 };
 
-export function InsideOutsideChart({ hours, refreshTick }: Props) {
+export function InsideOutsideChart({ hours, refreshTick, accent }: Props) {
   const [inside, setInside] = useState<Row[]>([]);
   const { outsideByHour, geoStatus, geoError, retry } = useOutsideHistory(hours, refreshTick);
 
@@ -113,23 +106,21 @@ export function InsideOutsideChart({ hours, refreshTick }: Props) {
   const hasOutside = data.some((p) => p.outside !== null);
 
   return (
-    <div style={styles.card}>
-      <div style={styles.headerRow}>
-        <div style={styles.title}>Inside vs Outside — last {hours}h</div>
+    <div className="card span-all">
+      <div className="card-head">
+        <span className="card-title">Inside vs Outside — last {hours}h</span>
         {geoStatus === "error" && (
-          <button style={styles.retryBtn} onClick={retry}>
-            Enable location
-          </button>
+          <button className="btn-ghost" onClick={retry}>Enable location</button>
         )}
       </div>
 
       {!hasInside && !hasOutside ? (
-        <div style={styles.empty}>No data yet for this range.</div>
+        <div className="card-empty">No data yet for this range.</div>
       ) : (
         <>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={data} margin={{ top: 4, right: 12, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="t"
                 type="number"
@@ -144,14 +135,14 @@ export function InsideOutsideChart({ hours, refreshTick }: Props) {
                 tick={{ fill: "var(--muted)", fontSize: 11 }}
                 unit="°"
               />
-              <Tooltip content={<TooltipContent />} />
+              <Tooltip content={<TooltipContent />} cursor={{ stroke: "rgba(255,255,255,0.18)" }} />
               <Legend wrapperStyle={{ fontSize: 13, color: "var(--muted)" }} />
               <Line
                 type="monotone"
                 dataKey="inside"
                 name="Inside"
-                stroke="var(--orange)"
-                strokeWidth={2}
+                stroke={accent}
+                strokeWidth={2.5}
                 dot={false}
                 connectNulls
               />
@@ -167,7 +158,7 @@ export function InsideOutsideChart({ hours, refreshTick }: Props) {
             </LineChart>
           </ResponsiveContainer>
           {!hasOutside && (
-            <div style={styles.note}>
+            <div className="chart-note">
               {geoStatus === "error"
                 ? geoError ?? "Outside data unavailable."
                 : "Loading outside temperature…"}
@@ -178,31 +169,3 @@ export function InsideOutsideChart({ hours, refreshTick }: Props) {
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  card: {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: "var(--radius)",
-    padding: "24px",
-  },
-  headerRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  title: { fontWeight: 600, fontSize: 16 },
-  empty: { color: "var(--muted)", textAlign: "center", padding: "40px 0" },
-  note: { color: "var(--muted)", fontSize: 13, marginTop: 10, textAlign: "center" },
-  retryBtn: {
-    background: "transparent",
-    border: "1px solid var(--border)",
-    borderRadius: 8,
-    color: "var(--text)",
-    cursor: "pointer",
-    fontSize: 13,
-    fontWeight: 500,
-    padding: "6px 14px",
-  },
-};

@@ -5,6 +5,7 @@ import { InsideOutsideChart } from "./components/InsideOutsideChart";
 import { LiveReadingCard } from "./components/LiveReading";
 import { StatsCard } from "./components/StatsCard";
 import { useWebSocket } from "./hooks/useWebSocket";
+import { themeForReading, themeVars } from "./theme";
 
 const WS_URL = `ws://${location.host}/ws`;
 const HOUR_OPTIONS = [6, 24, 48, 168] as const;
@@ -14,22 +15,22 @@ export default function App() {
   const [hours, setHours] = useState<number>(24);
   const [tick, setTick] = useState(0);
 
-  // Bump tick whenever a new live reading arrives so the chart refreshes
-  // We use reading?.timestamp as the dependency key via useEffect in HistoryChart
-  const refreshTick = tick;
+  const theme = themeForReading(reading);
 
   return (
-    <div style={styles.root}>
-      <header style={styles.header}>
-        <div style={styles.logo}>
-          <span style={styles.logoIcon}>🌡</span>
-          <span style={styles.logoText}>Termo Track</span>
+    <div className="app" style={themeVars(theme)}>
+      <div className="app-bg" aria-hidden="true" />
+
+      <header className="topbar">
+        <div className="logo">
+          <span className="logo-icon">🌡</span>
+          <span className="logo-text">Termo Track</span>
         </div>
-        <div style={styles.rangeButtons}>
+        <div className="range">
           {HOUR_OPTIONS.map((h) => (
             <button
               key={h}
-              style={{ ...styles.rangeBtn, ...(hours === h ? styles.rangeBtnActive : {}) }}
+              className={hours === h ? "active" : ""}
               onClick={() => { setHours(h); setTick((t) => t + 1); }}
             >
               {h < 48 ? `${h}h` : `${h / 24}d`}
@@ -38,55 +39,16 @@ export default function App() {
         </div>
       </header>
 
-      <main style={styles.main}>
-        <LiveReadingCard reading={reading} connected={connected} />
-        <ComparisonCard reading={reading} />
-        <StatsCard hours={hours} />
-        <InsideOutsideChart hours={hours} refreshTick={refreshTick} />
-        <HistoryChart hours={hours} refreshTick={refreshTick} />
+      <main className="stage">
+        <LiveReadingCard reading={reading} connected={connected} accent={theme.accent} />
+
+        <div className="grid">
+          <ComparisonCard reading={reading} />
+          <StatsCard hours={hours} />
+          <InsideOutsideChart hours={hours} refreshTick={tick} accent={theme.accent} />
+          <HistoryChart hours={hours} refreshTick={tick} accent={theme.accent} />
+        </div>
       </main>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  root: { display: "flex", flexDirection: "column", minHeight: "100vh" },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "16px 24px",
-    borderBottom: "1px solid var(--border)",
-    background: "var(--surface)",
-  },
-  logo: { display: "flex", alignItems: "center", gap: 10 },
-  logoIcon: { fontSize: 24 },
-  logoText: { fontWeight: 700, fontSize: 18, letterSpacing: "-0.02em" },
-  rangeButtons: { display: "flex", gap: 6 },
-  rangeBtn: {
-    background: "transparent",
-    border: "1px solid var(--border)",
-    borderRadius: 8,
-    color: "var(--muted)",
-    cursor: "pointer",
-    fontSize: 13,
-    fontWeight: 500,
-    padding: "6px 14px",
-    transition: "all 0.15s",
-  },
-  rangeBtnActive: {
-    background: "var(--blue)",
-    borderColor: "var(--blue)",
-    color: "#fff",
-  },
-  main: {
-    flex: 1,
-    maxWidth: 820,
-    margin: "0 auto",
-    padding: "24px 16px",
-    width: "100%",
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-  },
-};

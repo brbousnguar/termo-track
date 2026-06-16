@@ -38,13 +38,13 @@ export function ComparisonCard({ reading }: Props) {
   const hd = humDeltaInfo(humDiff);
 
   return (
-    <div style={styles.card}>
-      <div style={styles.header}>
-        <span style={styles.title}>Indoor vs Outdoor</span>
-        <span style={styles.locationChip}>{locationChip}</span>
+    <div className="card">
+      <div className="card-head">
+        <span className="card-title">Indoor vs Outdoor</span>
+        <span className="chip">{locationChip}</span>
       </div>
 
-      <div style={styles.panels}>
+      <div className="io-panels">
         <Panel
           icon="🏠"
           label="Room"
@@ -53,7 +53,7 @@ export function ComparisonCard({ reading }: Props) {
           accent="var(--orange)"
           placeholder="Waiting for sensor…"
         />
-        <div style={styles.divider} />
+        <div className="io-divider" />
         <Panel
           icon="🌤"
           label="Outside"
@@ -67,7 +67,7 @@ export function ComparisonCard({ reading }: Props) {
       </div>
 
       {haveBoth ? (
-        <div style={styles.deltaStrip}>
+        <div className="delta-strip">
           <DeltaRow
             label="Temperature"
             value={`${tempDiff > 0 ? "+" : ""}${tempDiff.toFixed(1)}°C`}
@@ -84,11 +84,9 @@ export function ComparisonCard({ reading }: Props) {
           />
         </div>
       ) : error ? (
-        <div style={styles.errorRow}>
-          <span style={styles.errorText}>{error}</span>
-          <button style={styles.retryBtn} onClick={retry}>
-            Retry
-          </button>
+        <div className="error-row">
+          <span className="error-text">{error}</span>
+          <button className="btn-ghost" onClick={retry}>Retry</button>
         </div>
       ) : null}
     </div>
@@ -111,21 +109,21 @@ function Panel({
   placeholder: string;
 }) {
   return (
-    <div style={styles.panel}>
-      <div style={styles.panelHead}>
-        <span style={styles.panelIcon}>{icon}</span>
-        <span style={styles.panelLabel}>{label}</span>
+    <div className="io-panel">
+      <div className="io-head">
+        <span className="io-icon">{icon}</span>
+        <span className="io-label">{label}</span>
       </div>
       {temp !== null ? (
         <>
-          <div style={styles.panelTemp}>
+          <div className="io-temp">
             <span style={{ color: accent }}>{temp.toFixed(1)}</span>
-            <span style={styles.panelUnit}>°C</span>
+            <span className="io-unit">°C</span>
           </div>
-          <div style={styles.panelHum}>{hum !== null ? `${hum.toFixed(0)}% humidity` : ""}</div>
+          <div className="io-hum">{hum !== null ? `${hum.toFixed(0)}% humidity` : ""}</div>
         </>
       ) : (
-        <div style={styles.panelPlaceholder}>{placeholder}</div>
+        <div className="io-placeholder">{placeholder}</div>
       )}
     </div>
   );
@@ -145,91 +143,12 @@ function DeltaRow({
   color: string;
 }) {
   return (
-    <div style={styles.deltaRow}>
-      <span style={styles.deltaLabel}>{label}</span>
-      <span style={styles.deltaRight}>
-        <span style={{ ...styles.deltaValue, color }}>
-          {arrow} {value}
-        </span>
-        <span style={styles.deltaText}>{text}</span>
+    <div className="delta-row">
+      <span className="delta-label">{label}</span>
+      <span className="delta-right">
+        <span className="delta-value" style={{ color }}>{arrow} {value}</span>
+        <span className="delta-text">{text}</span>
       </span>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  card: {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: "var(--radius)",
-    padding: "24px",
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  title: { fontWeight: 600, fontSize: 16 },
-  locationChip: {
-    fontSize: 13,
-    color: "var(--muted)",
-    background: "var(--bg)",
-    border: "1px solid var(--border)",
-    borderRadius: 999,
-    padding: "4px 12px",
-    maxWidth: "55%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  panels: { display: "flex", alignItems: "stretch", gap: 0 },
-  divider: { width: 1, background: "var(--border)", margin: "0 8px" },
-  panel: { flex: 1, padding: "4px 12px" },
-  panelHead: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 },
-  panelIcon: { fontSize: 18 },
-  panelLabel: {
-    fontSize: 12,
-    color: "var(--muted)",
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-    fontWeight: 600,
-  },
-  panelTemp: { fontSize: 40, fontWeight: 700, lineHeight: 1, display: "flex", alignItems: "baseline", gap: 4 },
-  panelUnit: { fontSize: 18, fontWeight: 400, color: "var(--muted)" },
-  panelHum: { fontSize: 13, color: "var(--muted)", marginTop: 8 },
-  panelPlaceholder: { fontSize: 14, color: "var(--muted)", padding: "16px 0" },
-  deltaStrip: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTop: "1px solid var(--border)",
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
-  },
-  deltaRow: { display: "flex", alignItems: "center", justifyContent: "space-between" },
-  deltaLabel: { fontSize: 14, color: "var(--muted)" },
-  deltaRight: { display: "flex", alignItems: "baseline", gap: 10 },
-  deltaValue: { fontSize: 18, fontWeight: 700 },
-  deltaText: { fontSize: 13, color: "var(--muted)" },
-  errorRow: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTop: "1px solid var(--border)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  errorText: { fontSize: 13, color: "var(--muted)" },
-  retryBtn: {
-    background: "transparent",
-    border: "1px solid var(--border)",
-    borderRadius: 8,
-    color: "var(--text)",
-    cursor: "pointer",
-    fontSize: 13,
-    fontWeight: 500,
-    padding: "6px 14px",
-  },
-};

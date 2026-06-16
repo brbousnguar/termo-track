@@ -12,63 +12,54 @@ export function StatsCard({ hours }: Props) {
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
-    fetch(`/api/stats?hours=${hours}`)
-      .then((r) => r.json())
-      .then((j) => j.status === "ok" && setStats(j.data))
-      .catch(() => {});
-    const id = setInterval(() => {
+    const load = () =>
       fetch(`/api/stats?hours=${hours}`)
         .then((r) => r.json())
         .then((j) => j.status === "ok" && setStats(j.data))
         .catch(() => {});
-    }, 60_000);
+    load();
+    const id = setInterval(load, 60_000);
     return () => clearInterval(id);
   }, [hours]);
 
-  if (!stats) return null;
+  if (!stats) {
+    return (
+      <div className="card">
+        <div className="card-head"><span className="card-title">Last {hours}h summary</span></div>
+        <div className="card-empty">No data yet.</div>
+      </div>
+    );
+  }
 
   return (
-    <div style={styles.card}>
-      <div style={styles.title}>Last {hours}h summary  <span style={styles.count}>({stats.count} readings)</span></div>
-      <table style={styles.table}>
+    <div className="card">
+      <div className="card-head">
+        <span className="card-title">Last {hours}h summary <span className="count">({stats.count} readings)</span></span>
+      </div>
+      <table className="stats-table">
         <thead>
           <tr>
-            <th style={styles.th}></th>
-            <th style={styles.th}>Min</th>
-            <th style={styles.th}>Avg</th>
-            <th style={styles.th}>Max</th>
+            <th></th>
+            <th>Min</th>
+            <th>Avg</th>
+            <th>Max</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td style={styles.label}>Temperature</td>
-            <td style={styles.val}>{stats.temp_min}°C</td>
-            <td style={{ ...styles.val, color: "var(--orange)", fontWeight: 600 }}>{stats.temp_avg}°C</td>
-            <td style={styles.val}>{stats.temp_max}°C</td>
+            <td className="label">Temperature</td>
+            <td className="val">{stats.temp_min}°C</td>
+            <td className="val avg" style={{ color: "var(--orange)" }}>{stats.temp_avg}°C</td>
+            <td className="val">{stats.temp_max}°C</td>
           </tr>
           <tr>
-            <td style={styles.label}>Humidity</td>
-            <td style={styles.val}>{stats.hum_min}%</td>
-            <td style={{ ...styles.val, color: "var(--teal)", fontWeight: 600 }}>{stats.hum_avg}%</td>
-            <td style={styles.val}>{stats.hum_max}%</td>
+            <td className="label">Humidity</td>
+            <td className="val">{stats.hum_min}%</td>
+            <td className="val avg" style={{ color: "var(--teal)" }}>{stats.hum_avg}%</td>
+            <td className="val">{stats.hum_max}%</td>
           </tr>
         </tbody>
       </table>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  card: {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: "var(--radius)",
-    padding: "24px",
-  },
-  title: { fontWeight: 600, fontSize: 16, marginBottom: 16 },
-  count: { color: "var(--muted)", fontWeight: 400, fontSize: 13 },
-  table: { width: "100%", borderCollapse: "collapse" },
-  th: { textAlign: "center", fontSize: 12, color: "var(--muted)", padding: "4px 12px", textTransform: "uppercase", letterSpacing: "0.05em" },
-  label: { fontSize: 14, color: "var(--muted)", padding: "8px 0" },
-  val: { textAlign: "center", fontSize: 15, padding: "8px 12px" },
-};
