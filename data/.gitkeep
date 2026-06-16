@@ -1,0 +1,2 @@
+# Shared SQLite DB lives here (readings.db, gitignored).
+# Bind-mounted into the backend container; the host scanner writes here too.

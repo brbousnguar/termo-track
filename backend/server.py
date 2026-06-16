@@ -11,6 +11,7 @@ The server polls for new readings and pushes them to WebSocket clients.
 import asyncio
 import json
 import logging
+import os
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -113,4 +114,6 @@ async def websocket_endpoint(ws: WebSocket):
 
 
 if __name__ == "__main__":
-    uvicorn.run("server:app", host="127.0.0.1", port=8765, reload=False)
+    host = os.getenv("HOST", "127.0.0.1")
+    port = int(os.getenv("PORT", "8765"))
+    uvicorn.run("server:app", host=host, port=port, reload=False)
