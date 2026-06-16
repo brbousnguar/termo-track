@@ -1,9 +1,12 @@
 import aiosqlite
 import asyncio
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "readings.db"
+# DB location is overridable via DB_PATH so the scanner (host) and server
+# (container) can point at the same shared SQLite file.
+DB_PATH = Path(os.getenv("DB_PATH", Path(__file__).parent / "readings.db"))
 
 CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS readings (
