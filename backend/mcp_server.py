@@ -63,6 +63,9 @@ def _comfort_label(temp: float, humidity: float) -> str:
 # don't hammer the free public APIs.
 
 _WEATHER_TTL = 600  # seconds
+_DEFAULT_LATITUDE = 47.2184
+_DEFAULT_LONGITUDE = -1.5536
+_DEFAULT_LOCATION_NAME = "Nantes"
 _weather_cache: dict = {"ts": 0.0, "data": None}
 _weather_lock = asyncio.Lock()
 
@@ -73,8 +76,8 @@ def _configured_coords() -> tuple[float, float, str | None] | None:
         try:
             return float(lat), float(lon), os.getenv("LOCATION_NAME")
         except ValueError:
-            return None
-    return None
+            pass
+    return _DEFAULT_LATITUDE, _DEFAULT_LONGITUDE, os.getenv("LOCATION_NAME") or _DEFAULT_LOCATION_NAME
 
 
 async def _ip_location(client: httpx.AsyncClient) -> tuple[float, float, str | None]:
@@ -103,13 +106,7 @@ async def _fetch_outside_weather() -> dict:
         if configured:
             lat, lon, name = configured
         else:
-            try:
-                lat, lon, name = await _ip_location(client)
-            except Exception:
-                return {
-                    "error": "Could not determine location. Set LATITUDE and "
-                    "LONGITUDE env vars (and optionally LOCATION_NAME)."
-                }
+            lat, lon, name = _DEFAULT_LATITUDE, _DEFAULT_LONGITUDE, _DEFAULT_LOCATION_NAME
 
         try:
             r = await client.get(
