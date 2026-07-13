@@ -16,21 +16,7 @@ interface WeatherState {
   retry: () => void;
 }
 
-// Open-Meteo is free and needs no API key; BigDataCloud gives a best-effort
-// city name for the resolved coordinates (also keyless). Refresh every 10 min.
 const REFRESH_MS = 10 * 60 * 1000;
-
-async function reverseGeocode(lat: number, lon: number): Promise<string | undefined> {
-  try {
-    const r = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
-    );
-    const j = await r.json();
-    return j.city || j.locality || j.principalSubdivision || undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 export function useWeather(): WeatherState {
   const geo = useGeolocation();
@@ -52,11 +38,10 @@ export function useWeather(): WeatherState {
       if (!cur || typeof cur.temperature_2m !== "number") {
         throw new Error("malformed weather response");
       }
-      const locationName = await reverseGeocode(lat, lon);
       setWeather({
         temperature: cur.temperature_2m,
         humidity: cur.relative_humidity_2m,
-        locationName,
+        locationName: "Nantes",
       });
       setFetchState("ready");
     } catch {
