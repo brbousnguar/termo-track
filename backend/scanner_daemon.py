@@ -13,6 +13,7 @@ System Settings → Privacy & Security → Bluetooth, then re-run this script.
 import asyncio
 import logging
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -27,8 +28,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+WATCHDOG_TIMEOUT = 300       # seconds — restart BLE scan if silent for this long
+WATCHDOG_CHECK_INTERVAL = 60 # how often the watchdog polls
+
+last_reading_at: float = 0.0
+
 
 async def on_reading(reading):
+    global last_reading_at
+    last_reading_at = time.monotonic()
     await insert_reading(
         temperature=reading.temperature,
         humidity=reading.humidity,
@@ -43,14 +51,43 @@ async def on_reading(reading):
     )
 
 
-async def main():
-    await init_db()
+async def _watchdog(scanner: ThermoproScanner) -> None:
+    while True:
+        await asyncio.sleep(WATCHDOG_CHECK_INTERVAL)
+        elapsed = time.monotonic() - last_reading_at
+        if elapsed >= WATCHDOG_TIMEOUT:
+            logger.warning(
+                "Watchdog: no reading for %.0f s — restarting BLE scan", elapsed
+            )
+            scanner.stop()
+            return
+
+
+async def _run_scanner() -> None:
+    global last_reading_at
+    last_reading_at = time.monotonic()
     scanner = ThermoproScanner(on_reading=on_reading, scan_interval=30)
+    watchdog_task = asyncio.create_task(_watchdog(scanner))
     try:
         await scanner.run()
-    except KeyboardInterrupt:
-        logger.info("Stopped.")
+    finally:
+        watchdog_task.cancel()
+        try:
+            await watchdog_task
+        except asyncio.CancelledError:
+            pass
+
+
+async def main():
+    await init_db()
+    while True:
+        await _run_scanner()
+        logger.info("Restarting BLE scanner in 2 s …")
+        await asyncio.sleep(2)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Stopped.")

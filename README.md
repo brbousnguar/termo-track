@@ -1,281 +1,184 @@
-# Termo Track
+<div align="center">
+  <img src="docs/branding/icon-256.png" width="72" alt="Termo Track" />
+  <h1>Termo Track</h1>
+  <p><strong>Live indoor climate tracking from ThermoPro BLE sensors, with outside-weather comparison.</strong><br/>Local-first architecture: scanner, API, and MCP all read the same SQLite data without a cloud account.</p>
 
-Track temperature and humidity from a **ThermoPro** Bluetooth sensor and compare
-your room against the live outside weather — all in a clean local dashboard.
+  <p>
+    <img src="https://img.shields.io/badge/platform-Web%20%7C%20MCP-1259b5?style=flat-square" alt="Platform" />
+    <img src="https://img.shields.io/badge/backend-FastAPI-009688?style=flat-square&logo=fastapi" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/frontend-React%20%2B%20Vite-61DAFB?style=flat-square&logo=react&logoColor=111827" alt="React" />
+    <img src="https://img.shields.io/badge/database-SQLite-003B57?style=flat-square&logo=sqlite" alt="SQLite" />
+  </p>
+</div>
 
-No pairing, no cloud account, no API keys. The sensor broadcasts its readings
-over BLE advertisements; a small daemon listens, stores them in SQLite, and a
-FastAPI server streams them to a React dashboard.
+---
 
-## Features
+## Visual identity
 
-- **Live readings** — temperature & humidity pushed to the browser over WebSocket.
-- **Stale-data detection** — the dashboard warns when readings stop arriving
-  (e.g. the scanner died) instead of silently showing old values.
-- **Indoor vs Outdoor** — uses your browser geolocation + [Open-Meteo](https://open-meteo.com)
-  (free, keyless) to show the temperature/humidity difference between your room
-  and outside.
-- **History & stats** — min/avg/max over a selectable window, plus a chart.
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/icon-preview-dark.png" width="320" alt="Termo Track app icon preview on dark background" />
+      <br/><sub><b>Thermo gradient icon (cool blue → warm orange) for web/PWA assets</b></sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+## What it does
+
+Termo Track listens to ThermoPro BLE broadcasts, stores readings in SQLite, and serves live temperature/humidity to a React dashboard and MCP tools.
+
+- Streams live readings over WebSocket (`/ws`) with stale-data signaling.
+- Shows history + min/avg/max stats over selectable windows.
+- Compares indoor readings with outside weather from Open-Meteo (keyless).
+- Exposes the same sensor data to AI clients via MCP tools.
+
+---
+
+## How it works
+
+```text
+1. scanner_daemon.py receives BLE advertisements from ThermoPro sensors
+2. scanner writes readings into SQLite (data/readings.db)
+3. FastAPI serves REST + WebSocket from the same DB
+4. React UI reads /api + /ws through Vite (dev) or nginx (Docker)
+5. mcp_server.py exposes sensor and weather tools over stdio or HTTP MCP
+```
+
+---
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    sensor["🌡️ ThermoPro sensor<br/>(TP35x, BLE)"]
+    SENSOR["ThermoPro BLE sensor"]
+    SCANNER["scanner_daemon.py"]
+    DB[("data/readings.db")]
+    API["FastAPI server.py :8765"]
+    UI["React dashboard :5173 / :8088"]
+    MCP["mcp_server.py :8675 or stdio"]
+    WEATHER["Open-Meteo API"]
 
-    subgraph host["Host machine"]
-        scanner["scanner_daemon.py<br/>BLE listener"]
-        ble["ble_scanner.py<br/>advert decoder"]
-        dbmod["database.py<br/>shared access layer"]
-        db[("readings.db<br/>SQLite")]
-        api["server.py — FastAPI<br/>:8765 · REST + WS"]
-        mcp["mcp_server.py — FastMCP<br/>:8675 /mcp · or stdio"]
-        web["nginx / Vite dev<br/>:8088 (or :5173)<br/>serves SPA + proxies /api,/ws"]
-    end
-
-    subgraph browser["Browser — React dashboard"]
-        ui["Dashboard UI"]
-    end
-
-    subgraph ext["External keyless APIs"]
-        meteo["api.open-meteo.com<br/>outside weather"]
-        geo["api.bigdatacloud.net<br/>reverse geocode"]
-    end
-
-    clients["MCP clients<br/>Claude Desktop / Code"]
-
-    sensor -- "BLE advertisements" --> scanner
-    scanner -- "decode" --> ble
-    scanner -- "write" --> dbmod
-    dbmod --> db
-    api -- "read / poll" --> dbmod
-    mcp -- "read-only" --> dbmod
-
-    ui -- "GET /api/*" --> web
-    ui -- "WS /ws (live)" --> web
-    web -- "proxy /api + /ws" --> api
-    ui -- "browser geolocation + fetch" --> meteo
-    ui -- "fetch" --> geo
-    mcp -- "outside weather" --> meteo
-
-    clients -- "MCP (stdio / HTTP via mcp-remote)" --> mcp
+    SENSOR --> SCANNER
+    SCANNER --> DB
+    API --> DB
+    MCP --> DB
+    UI --> API
+    UI --> WEATHER
+    MCP --> WEATHER
 ```
 
-The scanner, API server, and MCP server are **independent processes** that
-communicate only through the shared SQLite DB — the MCP server has no dependency
-on the FastAPI server. The browser also talks directly to two keyless public
-APIs for the indoor-vs-outdoor comparison.
+---
 
+## API surface
+
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/api/current` | Latest sensor reading |
+| GET | `/api/history?hours=24` | Readings for a time window |
+| GET | `/api/stats?hours=24` | Min/max/avg summary |
+| GET | `/api/health` | Service health check |
+| WS | `/ws` | Live reading push |
+
+MCP tools (from `backend/mcp_server.py`): `get_current_reading`, `get_sensor_history`, `get_sensor_stats`, `get_comfort_level`, `get_outside_weather`, `get_indoor_outdoor_comparison`.
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| BLE ingestion | Python, `bleak` |
+| API | FastAPI, Uvicorn |
+| MCP | `mcp` Python SDK (`FastMCP`) |
+| Storage | SQLite + `aiosqlite` |
+| Frontend | React, TypeScript, Vite, Recharts |
+| Container runtime | Docker Compose + nginx |
+
+---
+
+## Repository layout
+
+```text
+termo-track/
+├── backend/         BLE scanner, FastAPI server, MCP server, DB layer
+├── frontend/        React + Vite UI, nginx config, web assets
+├── data/            Shared SQLite volume (readings.db)
+├── docs/
+│   ├── branding/    Generated icon sources for docs/identity
+│   └── screenshots/ README visuals
+└── docker-compose.yml
 ```
-backend/
-  ble_scanner.py      # BLE advertisement decoding (ThermoPro TP35x family)
-  scanner_daemon.py   # long-running scanner → writes readings to the DB
-  server.py           # FastAPI: REST endpoints + WebSocket live feed
-  mcp_server.py       # MCP server (FastMCP): exposes sensor data to Claude/apps
-  database.py         # SQLite access (DB path overridable via DB_PATH)
-  start_server.sh     # starts the API server
-  Dockerfile          # backend image (FastAPI + uvicorn)
-  Dockerfile.mcp      # MCP image (FastMCP over HTTP)
-frontend/
-  src/                # React + Vite dashboard
-  Dockerfile          # builds the app, serves it via nginx
-  nginx.conf          # nginx config: serves the SPA, proxies /api + /ws
-docker-compose.yml    # runs backend + frontend + mcp (scanner stays on the host)
-```
 
-## Requirements
+---
 
-- Python 3.11+
-- Node 18+
-- A ThermoPro sensor (TP357 / TP358 / TP359 / TP350S / …)
-- **macOS:** grant Bluetooth access to your terminal/IDE in
-  *System Settings → Privacy & Security → Bluetooth*.
-- Docker + Docker Compose — optional, for the [containerized setup](#run-with-docker-compose).
+## Run locally
 
-## Setup
+**Prerequisites:** Python 3.11+, Node 18+, a ThermoPro BLE sensor.
 
 ```bash
-# Backend
+# 1) Backend environment
 cd backend
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 
-# Frontend
+# 2) Frontend dependencies
 cd ../frontend
 npm install
 ```
 
-## Running
-
-The scanner and the API server are **independent processes** — start each in
-its own terminal.
+Start services in separate terminals:
 
 ```bash
-# 1. Scanner — listens for BLE broadcasts and writes them to the DB
+# Terminal A: BLE scanner (host Bluetooth access required)
 cd backend
 .venv/bin/python scanner_daemon.py
 
-# 2. API server — REST + WebSocket on port 8765 (second terminal)
+# Terminal B: FastAPI server
 cd backend
-./start_server.sh
+.venv/bin/python server.py
 
-# 3. Frontend — dev server on http://localhost:5173 (proxies /api and /ws to 8765)
+# Terminal C: frontend dev server
 cd frontend
 npm run dev
 ```
 
-Open <http://localhost:5173>. Allow location access when prompted to enable the
-indoor-vs-outdoor comparison.
+Open `http://localhost:5173`.
 
-> **Tip:** if the dashboard shows a "data may be stale" warning, the scanner
-> isn't running. Start it with `python scanner_daemon.py` — it's separate from
-> the API server.
+---
 
 ## Run with Docker Compose
 
-The two network services (FastAPI backend + nginx-served frontend) are
-containerized. The BLE **scanner is not**: Docker Desktop on macOS has no access
-to the host Bluetooth adapter, so the scanner runs on the host. All three share
-the SQLite DB at `./data/readings.db` (bind-mounted into the backend container).
+The dashboard/API/MCP are containerized. The BLE scanner stays on the host (Docker Desktop on macOS cannot access host BLE directly).
 
 ```bash
-# Build and start backend + frontend
-docker compose up --build -d          # UI on http://localhost:8088
+# Build and start frontend + backend + MCP
+docker compose up --build -d
 
-# Run the scanner on the host (needs Bluetooth), writing to the shared DB
+# Run scanner on host against shared DB
 cd backend
 DB_PATH="$(pwd)/../data/readings.db" .venv/bin/python scanner_daemon.py
-
-# Stop the stack
-docker compose down
 ```
 
-| Service    | Runs as           | Host port  | Notes                                    |
-| ---------- | ----------------- | ---------- | ---------------------------------------- |
-| `frontend` | nginx + Vite build | **8088**  | serves the SPA, proxies `/api` + `/ws`   |
-| `backend`  | python:3.12-slim  | (internal) | FastAPI/uvicorn, DB path from `DB_PATH`  |
-| `mcp`      | python:3.12-slim  | **8675**  | MCP over HTTP at `/mcp`; DB mounted read-only |
-| scanner    | host process      | —          | BLE → SQLite; needs native Bluetooth     |
+Ports:
+- UI: `http://localhost:8088`
+- MCP HTTP endpoint: `http://localhost:8675/mcp`
 
-> The UI port is set in `docker-compose.yml` (`8088:80`) — change the left-hand
-> number if `8088` is taken on your machine.
+---
 
-## MCP — expose sensor data to Claude & other apps
-
-`backend/mcp_server.py` (built on [FastMCP](https://github.com/modelcontextprotocol/python-sdk))
-serves the sensor data over the **Model Context Protocol**, so Claude (Desktop /
-Code) and any other MCP client can query your room conditions in natural language:
-
-| Tool                            | What it returns                                              |
-| ------------------------------- | ----------------------------------------------------------- |
-| `get_current_reading`           | latest temperature + humidity + a comfort label             |
-| `get_sensor_history`            | readings over the last *N* hours (default 24, max 168)      |
-| `get_sensor_stats`              | min / max / avg temperature & humidity over *N* hours       |
-| `get_comfort_level`             | comfort assessment + a tip (heat / cool / humidify …)       |
-| `get_outside_weather`           | current outside temperature + humidity (Open-Meteo, keyless)|
-| `get_indoor_outdoor_comparison` | indoor vs outside readings + the delta and a plain summary  |
-
-The sensor tools read the same `data/readings.db` the scanner writes — they have
-**no dependency on the FastAPI server**. The two weather tools fetch live
-conditions from [Open-Meteo](https://open-meteo.com) so the model can compare your
-room against outside (the same comparison the dashboard shows). **No location
-config is needed** — the server figures out where the host is from its network and
-pulls the weather for that location automatically. Transport and (optional)
-location overrides are env vars:
-
-| Env var         | Default     | Purpose                                            |
-| --------------- | ----------- | -------------------------------------------------- |
-| `MCP_TRANSPORT` | `stdio`     | `stdio` (local clients) or `streamable-http`       |
-| `MCP_HOST`      | `127.0.0.1` | bind address for HTTP mode                         |
-| `MCP_PORT`      | `8675`      | port for HTTP mode (endpoint at `/mcp`)            |
-| `DB_PATH`       | —           | path to the shared SQLite DB                       |
-| `LATITUDE`      | auto (IP)   | *optional* — pin a location instead of auto-detect |
-| `LONGITUDE`     | auto (IP)   | *optional* — paired with `LATITUDE`                |
-| `LOCATION_NAME` | auto        | *optional* — overrides the displayed place name    |
-
-> Location is auto-detected from the host's public IP (≈ city-level — enough for
-> outside weather). The dashboard, running in your browser, uses precise GPS
-> geolocation instead. Only set `LATITUDE`/`LONGITUDE` if you want to override the
-> auto-detected spot.
-
-### Local (same machine) — stdio
-
-The simplest, most secure option when the client runs on the same Mac as the DB:
-the client spawns `mcp_server.py` directly over stdio. No container or network
-needed.
-
-**Claude Code** (available in every project — registers a user-scope server):
+## Build and validation commands
 
 ```bash
-claude mcp add termo-track -s user \
-  -e DB_PATH=/abs/path/to/termo-track/data/readings.db \
-  -- /abs/path/to/termo-track/backend/.venv/bin/python \
-     /abs/path/to/termo-track/backend/mcp_server.py
+# Frontend production build
+cd frontend && npm run build
+
+# API smoke check
+curl -s http://127.0.0.1:8765/api/health
+
+# Single MCP tool check (stdio mode)
+cd backend && MCP_TRANSPORT=stdio .venv/bin/python mcp_server.py
 ```
 
-**Claude Desktop** — add to
-`~/Library/Application Support/Claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "termo-track": {
-      "command": "/abs/path/to/termo-track/backend/.venv/bin/python",
-      "args": ["/abs/path/to/termo-track/backend/mcp_server.py"],
-      "env": { "DB_PATH": "/abs/path/to/termo-track/data/readings.db" }
-    }
-  }
-}
-```
-
-Use absolute paths and the venv's Python (Claude Desktop spawns with a minimal
-environment). Fully quit and reopen Claude Desktop (⌘Q) after editing.
-
-### LAN / remote — HTTP
-
-To reach the sensor from **another machine on your network** (or any HTTP MCP
-client), run the `mcp` container (started by `docker compose up`). It serves
-streamable-HTTP at `http://<host>:8675/mcp`, reading the DB read-only.
-
-Find the host's LAN address (`ipconfig getifaddr en0`) and point clients at it.
-Many Claude Desktop builds only accept `command`-based servers in their config,
-so bridge stdio→HTTP with [`mcp-remote`](https://www.npmjs.com/package/mcp-remote)
-(needs Node on the client machine):
-
-```json
-{
-  "mcpServers": {
-    "termo-track": {
-      "command": "/Users/you/.nvm/versions/node/v24.11.0/bin/npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "http://192.168.1.95:8675/mcp",
-        "--allow-http"
-      ],
-      "env": {
-        "PATH": "/Users/you/.nvm/versions/node/v24.11.0/bin:/usr/local/bin:/usr/bin:/bin"
-      }
-    }
-  }
-}
-```
-
-> **Gotchas that bite on a real setup:**
-> - `--allow-http` is **required** — `mcp-remote` refuses plain `http://` URLs
->   without it (it assumes HTTPS otherwise).
-> - Use the **absolute path to `npx`** as `command` and set `PATH` to include
->   your Node `bin` — Claude Desktop's minimal environment usually can't find an
->   nvm-managed `npx` otherwise.
-> - The host (where the container runs) must be **awake with Docker running**,
->   and its **firewall** must allow incoming connections on `8675`.
-
-> ⚠️ The HTTP endpoint is **unauthenticated** and bound to all interfaces. That's
-> fine on a trusted home LAN — do **not** port-forward `8675` to the internet.
-> For access beyond the LAN, put it on a private network (e.g. Tailscale) and
-> point clients at that address instead.
-
-## Useful scripts
-
-- `python backend/discover.py` — list nearby BLE devices and their raw
-  advertisement data (handy for identifying your sensor).
+There is currently no dedicated automated lint/test script in this project.
