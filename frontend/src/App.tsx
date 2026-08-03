@@ -7,7 +7,8 @@ import { StatsCard } from "./components/StatsCard";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { themeForReading, themeVars } from "./theme";
 
-const WS_URL = `ws://${location.host}/ws`;
+const WS_PROTOCOL = location.protocol === "https:" ? "wss" : "ws";
+const WS_URL = `${WS_PROTOCOL}://${location.host}/ws`;
 const HOUR_OPTIONS = [6, 24, 48, 168] as const;
 
 export default function App() {
