@@ -1,0 +1,21 @@
+{
+  "name": "Termo Track",
+  "short_name": "Termo Track",
+  "description": "Local ThermoPro temperature and humidity dashboard with indoor/outdoor comparison.",
+  "icons": [
+    {
+      "src": "/favicon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#1259b5",
+  "background_color": "#0d1e39",
+  "display": "standalone",
+  "start_url": "/"
+}

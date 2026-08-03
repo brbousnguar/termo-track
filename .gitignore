@@ -17,3 +17,6 @@ backend/readings.db
 
 # Test artifacts / screenshots
 *.png
+!frontend/public/*.png
+!docs/branding/*.png
+!docs/screenshots/*.png
