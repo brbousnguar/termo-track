@@ -1,5 +1,8 @@
+import { useEffect, useRef } from "react";
 import type { LiveReading } from "../hooks/useWebSocket";
 import { useWeather } from "../hooks/useWeather";
+import { useToast } from "./Toast";
+import { SkeletonBox, SkeletonText } from "./Skeleton";
 
 interface Props {
   reading: LiveReading | null;
@@ -21,6 +24,17 @@ function humDeltaInfo(diff: number): { text: string; color: string; arrow: strin
 
 export function ComparisonCard({ reading }: Props) {
   const { weather, status, error, retry } = useWeather();
+  const { toast } = useToast();
+  const prevError = useRef<string | null>(null);
+
+  // Toast on weather fetch error (only once per error transition)
+  useEffect(() => {
+    if (error && error !== prevError.current) {
+      prevError.current = error;
+      toast("Weather fetch failed", "error");
+    }
+    if (!error) prevError.current = null;
+  }, [error, toast]);
 
   const locationChip =
     status === "ready" && weather?.locationName
@@ -63,6 +77,7 @@ export function ComparisonCard({ reading }: Props) {
           placeholder={
             status === "error" ? "Unavailable" : status === "locating" ? "Locating…" : "Loading…"
           }
+          loading={status === "loading" || status === "locating"}
         />
       </div>
 
@@ -100,6 +115,7 @@ function Panel({
   hum,
   accent,
   placeholder,
+  loading,
 }: {
   icon: string;
   label: string;
@@ -107,6 +123,7 @@ function Panel({
   hum: number | null;
   accent: string;
   placeholder: string;
+  loading?: boolean;
 }) {
   return (
     <div className="io-panel">
@@ -114,7 +131,12 @@ function Panel({
         <span className="io-icon">{icon}</span>
         <span className="io-label">{label}</span>
       </div>
-      {temp !== null ? (
+      {loading ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <SkeletonBox width={100} height={38} borderRadius={6} />
+          <SkeletonText width="50%" />
+        </div>
+      ) : temp !== null ? (
         <>
           <div className="io-temp">
             <span style={{ color: accent }}>{temp.toFixed(1)}</span>

@@ -10,6 +10,8 @@ import {
   YAxis,
 } from "recharts";
 import { useOutsideHistory } from "../hooks/useOutsideHistory";
+import { SkeletonChart } from "./Skeleton";
+import { useToast } from "./Toast";
 
 interface Row {
   timestamp: string;
@@ -64,16 +66,30 @@ const TooltipContent = ({ active, payload, label }: any) => {
 };
 
 export function InsideOutsideChart({ hours, refreshTick, accent }: Props) {
+  const { toast } = useToast();
   const [inside, setInside] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { outsideByHour, geoStatus, geoError, retry } = useOutsideHistory(hours, refreshTick);
 
-  useEffect(() => {
+  const fetchInside = () => {
+    setLoading(true);
+    setError(null);
     fetch(`/api/history?hours=${hours}`)
       .then((r) => r.json())
       .then((j) => {
         if (j.status === "ok") setInside(j.data);
+        else setError("Unexpected response from server");
       })
-      .catch(() => {});
+      .catch(() => {
+        setError("Failed to load indoor data");
+        toast("Failed to load indoor data", "error");
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchInside();
   }, [hours, refreshTick]);
 
   // Bucket indoor readings into hourly averages, keyed by UTC hour (epoch ms).
@@ -114,7 +130,16 @@ export function InsideOutsideChart({ hours, refreshTick, accent }: Props) {
         )}
       </div>
 
-      {!hasInside && !hasOutside ? (
+      {loading ? (
+        <SkeletonChart />
+      ) : error ? (
+        <div className="card-empty">
+          <div className="error-row" style={{ justifyContent: "center", border: 0, margin: 0 }}>
+            <span className="error-text">⚠ {error}</span>
+            <button className="btn-ghost" onClick={fetchInside}>Retry</button>
+          </div>
+        </div>
+      ) : !hasInside && !hasOutside ? (
         <div className="card-empty">No data yet for this range.</div>
       ) : (
         <>

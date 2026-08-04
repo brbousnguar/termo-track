@@ -3,6 +3,8 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer,
 } from "recharts";
+import { SkeletonChart } from "./Skeleton";
+import { useToast } from "./Toast";
 
 interface Row { timestamp: string; temperature: number; humidity: number }
 
@@ -27,13 +29,29 @@ const TooltipContent = ({ active, payload, label }: any) => {
 };
 
 export function HistoryChart({ hours, refreshTick, accent }: Props) {
+  const { toast } = useToast();
   const [data, setData] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchData = () => {
+    setLoading(true);
+    setError(null);
     fetch(`/api/history?hours=${hours}`)
       .then((r) => r.json())
-      .then((j) => { if (j.status === "ok") setData(j.data); })
-      .catch(() => {});
+      .then((j) => {
+        if (j.status === "ok") setData(j.data);
+        else setError("Unexpected response from server");
+      })
+      .catch(() => {
+        setError("Failed to load history data");
+        toast("Failed to load history", "error");
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [hours, refreshTick]);
 
   const chartData = data.map((r) => ({
@@ -45,7 +63,16 @@ export function HistoryChart({ hours, refreshTick, accent }: Props) {
   return (
     <div className="card span-all">
       <div className="card-head"><span className="card-title">History — last {hours}h</span></div>
-      {chartData.length === 0 ? (
+      {loading ? (
+        <SkeletonChart />
+      ) : error ? (
+        <div className="card-empty">
+          <div className="error-row" style={{ justifyContent: "center", border: 0, margin: 0 }}>
+            <span className="error-text">⚠ {error}</span>
+            <button className="btn-ghost" onClick={fetchData}>Retry</button>
+          </div>
+        </div>
+      ) : chartData.length === 0 ? (
         <div className="card-empty">No data yet. Readings will appear here once the sensor is detected.</div>
       ) : (
         <ResponsiveContainer width="100%" height={260}>
