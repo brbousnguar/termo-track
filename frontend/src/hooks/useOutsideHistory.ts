@@ -17,7 +17,7 @@ export function useOutsideHistory(hours: number, refreshTick: number): OutsideHi
   const [outsideByHour, setOutsideByHour] = useState<Map<number, number>>(new Map());
 
   useEffect(() => {
-    if (geo.status !== "ready" || !geo.coords) return;
+    if (!hours || geo.status !== "ready" || !geo.coords) return;
     const { latitude, longitude } = geo.coords;
     const pastDays = Math.min(92, Math.ceil(hours / 24) + 1);
     const url =

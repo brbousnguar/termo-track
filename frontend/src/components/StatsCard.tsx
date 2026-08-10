@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { SkeletonTable } from "./Skeleton";
 import { useToast } from "./Toast";
+import { Period, periodKey, periodLabel, periodRange } from "../lib/period";
 
 interface Stats {
   temp_min: number; temp_max: number; temp_avg: number;
@@ -8,9 +9,15 @@ interface Stats {
   count: number;
 }
 
-interface Props { hours: number; refreshTick?: number }
+interface Props { period: Period; refreshTick?: number }
 
-export function StatsCard({ hours, refreshTick = 0 }: Props) {
+function statsUrl(period: Period): string {
+  if (period.mode === "recent") return `/api/stats?hours=${period.hours}`;
+  const { start, end } = periodRange(period);
+  return `/api/stats/range?start=${start}&end=${end}`;
+}
+
+export function StatsCard({ period, refreshTick = 0 }: Props) {
   const { toast } = useToast();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,7 +26,7 @@ export function StatsCard({ hours, refreshTick = 0 }: Props) {
   const load = () => {
     setLoading(true);
     setError(null);
-    fetch(`/api/stats?hours=${hours}`)
+    fetch(statsUrl(period))
       .then((r) => r.json())
       .then((j) => {
         if (j.status === "ok") setStats(j.data);
@@ -36,12 +43,15 @@ export function StatsCard({ hours, refreshTick = 0 }: Props) {
     load();
     const id = setInterval(load, 60_000);
     return () => clearInterval(id);
-  }, [hours, refreshTick]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodKey(period), refreshTick]);
+
+  const title = period.mode === "recent" ? `Last ${periodLabel(period)} summary` : `${periodLabel(period)} summary`;
 
   return (
     <div className="card">
       <div className="card-head">
-        <span className="card-title">Last {hours}h summary{stats ? ` (${stats.count} readings)` : ""}</span>
+        <span className="card-title">{title}{stats ? ` (${stats.count} readings)` : ""}</span>
       </div>
       {loading ? (
         <SkeletonTable rows={2} cols={4} />
