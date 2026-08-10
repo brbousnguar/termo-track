@@ -1,4 +1,4 @@
-const CACHE = "termo-track-v2";
+const CACHE = "termo-track-v3";
 const SHELL = ["/"];
 
 // Static asset extensions to cache on first load
