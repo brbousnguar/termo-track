@@ -19,7 +19,7 @@
   <tr>
     <td align="center">
       <img src="docs/screenshots/icon-preview-dark.png" width="320" alt="Termo Track app icon preview on dark background" />
-      <br/><sub><b>Thermo gradient icon (cool blue → warm orange) for web/PWA assets</b></sub>
+      <br/><sub><b>Flat navy thermometer mark (no gradients) for web/PWA assets</b></sub>
     </td>
   </tr>
 </table>
