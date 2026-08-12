@@ -18,7 +18,14 @@ import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from database import get_history, get_latest, get_stats, init_db
+from database import (
+    get_daily_history,
+    get_history,
+    get_latest,
+    get_stats,
+    get_stats_range,
+    init_db,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -89,6 +96,22 @@ async def history(hours: int = 24):
 @app.get("/api/stats")
 async def stats(hours: int = 24):
     s = await get_stats(hours)
+    if s is None:
+        return {"status": "no_data"}
+    return {"status": "ok", "data": s}
+
+
+@app.get("/api/history/daily")
+async def history_daily(start: str, end: str):
+    """Daily-averaged history for an absolute [start, end) date range (Month/Year views)."""
+    rows = await get_daily_history(start, end)
+    return {"status": "ok", "data": rows, "count": len(rows)}
+
+
+@app.get("/api/stats/range")
+async def stats_range(start: str, end: str):
+    """Min/avg/max summary for an absolute [start, end) date range (Month/Year views)."""
+    s = await get_stats_range(start, end)
     if s is None:
         return {"status": "no_data"}
     return {"status": "ok", "data": s}

@@ -85,3 +85,50 @@ async def get_stats(hours: int = 24) -> dict | None:
             if row and row["count"]:
                 return {k: round(v, 1) if isinstance(v, float) else v for k, v in dict(row).items()}
             return None
+
+
+async def get_daily_history(start: str, end: str) -> list[dict]:
+    """One row per calendar day (UTC) in [start, end), averaged. Used for Month/Year views,
+    where raw per-reading granularity (~1/min) would be tens of thousands of points."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            """
+            SELECT
+                date(timestamp)   as timestamp,
+                AVG(temperature)  as temperature,
+                AVG(humidity)     as humidity,
+                COUNT(*)          as count
+            FROM readings WHERE timestamp >= ? AND timestamp < ?
+            GROUP BY date(timestamp) ORDER BY timestamp ASC
+            """,
+            (start, end),
+        ) as cur:
+            rows = await cur.fetchall()
+            return [
+                {**dict(r), "temperature": round(r["temperature"], 1), "humidity": round(r["humidity"], 1)}
+                for r in rows
+            ]
+
+
+async def get_stats_range(start: str, end: str) -> dict | None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            """
+            SELECT
+                MIN(temperature) as temp_min,
+                MAX(temperature) as temp_max,
+                AVG(temperature) as temp_avg,
+                MIN(humidity)    as hum_min,
+                MAX(humidity)    as hum_max,
+                AVG(humidity)    as hum_avg,
+                COUNT(*)         as count
+            FROM readings WHERE timestamp >= ? AND timestamp < ?
+            """,
+            (start, end),
+        ) as cur:
+            row = await cur.fetchone()
+            if row and row["count"]:
+                return {k: round(v, 1) if isinstance(v, float) else v for k, v in dict(row).items()}
+            return None

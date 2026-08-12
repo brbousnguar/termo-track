@@ -5,13 +5,29 @@ import {
 } from "recharts";
 import { SkeletonChart } from "./Skeleton";
 import { useToast } from "./Toast";
+import { Period, periodKey, periodLabel, periodRange } from "../lib/period";
 
 interface Row { timestamp: string; temperature: number; humidity: number }
 
-interface Props { hours: number; refreshTick: number; accent: string }
+interface Props { period: Period; refreshTick: number; accent: string }
 
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+// Recent-mode readings are full ISO timestamps ("2026-08-10T14:23:00Z"); Month/Year
+// readings are daily-averaged and come back as bare dates ("2026-08-10"). Long
+// windows need the date/month shown, not just a repeating time-of-day.
+function fmtTime(period: Period, iso: string): string {
+  const d = new Date(iso);
+  if (period.mode === "recent") {
+    return period.hours <= 24
+      ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+function historyUrl(period: Period): string {
+  if (period.mode === "recent") return `/api/history?hours=${period.hours}`;
+  const { start, end } = periodRange(period);
+  return `/api/history/daily?start=${start}&end=${end}`;
 }
 
 const TooltipContent = ({ active, payload, label }: any) => {
@@ -28,7 +44,7 @@ const TooltipContent = ({ active, payload, label }: any) => {
   );
 };
 
-export function HistoryChart({ hours, refreshTick, accent }: Props) {
+export function HistoryChart({ period, refreshTick, accent }: Props) {
   const { toast } = useToast();
   const [data, setData] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +53,7 @@ export function HistoryChart({ hours, refreshTick, accent }: Props) {
   const fetchData = () => {
     setLoading(true);
     setError(null);
-    fetch(`/api/history?hours=${hours}`)
+    fetch(historyUrl(period))
       .then((r) => r.json())
       .then((j) => {
         if (j.status === "ok") setData(j.data);
@@ -52,17 +68,20 @@ export function HistoryChart({ hours, refreshTick, accent }: Props) {
 
   useEffect(() => {
     fetchData();
-  }, [hours, refreshTick]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodKey(period), refreshTick]);
 
   const chartData = data.map((r) => ({
-    time: fmtTime(r.timestamp),
+    time: fmtTime(period, r.timestamp),
     "Temp (°C)": r.temperature,
     "Humidity (%)": r.humidity,
   }));
 
+  const title = period.mode === "recent" ? `History — last ${periodLabel(period)}` : `History — ${periodLabel(period)}`;
+
   return (
     <div className="card span-all">
-      <div className="card-head"><span className="card-title">History — last {hours}h</span></div>
+      <div className="card-head"><span className="card-title">{title}</span></div>
       {loading ? (
         <SkeletonChart />
       ) : error ? (

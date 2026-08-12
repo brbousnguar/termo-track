@@ -31,8 +31,8 @@
 Termo Track listens to ThermoPro BLE broadcasts, stores readings in SQLite, and serves live temperature/humidity to a React dashboard and MCP tools.
 
 - Streams live readings over WebSocket (`/ws`) with stale-data signaling.
-- Shows history + min/avg/max stats over selectable windows.
-- Compares indoor readings with outside weather from Open-Meteo (keyless).
+- Shows history + min/avg/max stats over selectable windows — recent (6h–7d), or by navigating a specific past month or year.
+- Compares indoor readings with outside weather from Open-Meteo (keyless; forecast API for recent windows, historical archive API for month/year).
 - Exposes the same sensor data to AI clients via MCP tools.
 
 ---
@@ -77,8 +77,10 @@ flowchart LR
 | Method | Route | Purpose |
 |---|---|---|
 | GET | `/api/current` | Latest sensor reading |
-| GET | `/api/history?hours=24` | Readings for a time window |
-| GET | `/api/stats?hours=24` | Min/max/avg summary |
+| GET | `/api/history?hours=24` | Raw readings for a relative time window |
+| GET | `/api/history/daily?start&end` | Daily-averaged readings for an absolute `[start, end)` date range (Month/Year views) |
+| GET | `/api/stats?hours=24` | Min/max/avg summary for a relative time window |
+| GET | `/api/stats/range?start&end` | Min/max/avg summary for an absolute `[start, end)` date range |
 | GET | `/api/health` | Service health check |
 | WS | `/ws` | Live reading push |
 

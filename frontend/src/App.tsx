@@ -3,20 +3,21 @@ import { ComparisonCard } from "./components/ComparisonCard";
 import { HistoryChart } from "./components/HistoryChart";
 import { InsideOutsideChart } from "./components/InsideOutsideChart";
 import { LiveReadingCard } from "./components/LiveReading";
+import { PeriodSelector } from "./components/PeriodSelector";
 import { StatsCard } from "./components/StatsCard";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useRefresh } from "./hooks/useRefresh";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "./components/PullToRefreshIndicator";
 import { themeForReading, themeVars } from "./theme";
+import type { Period } from "./lib/period";
 
 const WS_PROTOCOL = location.protocol === "https:" ? "wss" : "ws";
 const WS_URL = `${WS_PROTOCOL}://${location.host}/ws`;
-const HOUR_OPTIONS = [6, 24, 48, 168] as const;
 
 export default function App() {
   const { reading, connected } = useWebSocket(WS_URL);
-  const [hours, setHours] = useState<number>(24);
+  const [period, setPeriod] = useState<Period>({ mode: "recent", hours: 24 });
   const { refreshTick, refresh, refreshing } = useRefresh();
   const { pullState, pullDistance } = usePullToRefresh(refresh);
 
@@ -33,17 +34,7 @@ export default function App() {
           <span className="logo-text">Termo Track</span>
         </div>
         <div className="topbar-actions">
-          <div className="range">
-            {HOUR_OPTIONS.map((h) => (
-              <button
-                key={h}
-                className={hours === h ? "active" : ""}
-                onClick={() => { setHours(h); refresh(); }}
-              >
-                {h < 48 ? `${h}h` : `${h / 24}d`}
-              </button>
-            ))}
-          </div>
+          <PeriodSelector period={period} onChange={(p) => { setPeriod(p); refresh(); }} />
           <button
             className={`refresh-btn${refreshing ? " spinning" : ""}`}
             onClick={refresh}
@@ -60,9 +51,9 @@ export default function App() {
 
         <div className="grid">
           <ComparisonCard reading={reading} />
-          <StatsCard hours={hours} refreshTick={refreshTick} />
-          <InsideOutsideChart hours={hours} refreshTick={refreshTick} accent={theme.accent} />
-          <HistoryChart hours={hours} refreshTick={refreshTick} accent={theme.accent} />
+          <StatsCard period={period} refreshTick={refreshTick} />
+          <InsideOutsideChart period={period} refreshTick={refreshTick} accent={theme.accent} />
+          <HistoryChart period={period} refreshTick={refreshTick} accent={theme.accent} />
         </div>
       </main>
     </div>
