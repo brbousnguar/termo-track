@@ -3,6 +3,7 @@ import {
   Legend,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -33,6 +34,17 @@ interface Point {
 }
 
 const HOUR_MS = 3_600_000;
+
+function insideMinMaxMedian(data: Point[]): { min: number; max: number; median: number } | null {
+  const values = data
+    .map((p) => p.inside)
+    .filter((v): v is number => v !== null)
+    .sort((a, b) => a - b);
+  if (values.length === 0) return null;
+  const mid = Math.floor(values.length / 2);
+  const median = values.length % 2 === 0 ? (values[mid - 1] + values[mid]) / 2 : values[mid];
+  return { min: values[0], max: values[values.length - 1], median: Math.round(median * 10) / 10 };
+}
 
 function fmtTick(period: Period, t: number): string {
   const d = new Date(t);
@@ -162,6 +174,10 @@ export function InsideOutsideChart({ period, refreshTick, accent }: Props) {
   const hasInside = data.some((p) => p.inside !== null);
   const hasOutside = data.some((p) => p.outside !== null);
 
+  // Min/max/median reference lines are only meaningful for the short "recent"
+  // windows (6h–7d); a month/year view is already daily-averaged.
+  const insideStats = isRecent ? insideMinMaxMedian(data) : null;
+
   return (
     <div className="card span-all">
       <div className="card-head">
@@ -223,6 +239,34 @@ export function InsideOutsideChart({ period, refreshTick, accent }: Props) {
                 dot={false}
                 connectNulls
               />
+              {insideStats && (
+                <>
+                  <ReferenceLine
+                    y={insideStats.max}
+                    stroke={accent}
+                    strokeDasharray="4 4"
+                    strokeOpacity={0.5}
+                    ifOverflow="extendDomain"
+                    label={{ value: `Max ${insideStats.max}°`, position: "top", fill: accent, fontSize: 11 }}
+                  />
+                  <ReferenceLine
+                    y={insideStats.median}
+                    stroke={accent}
+                    strokeDasharray="2 4"
+                    strokeOpacity={0.5}
+                    ifOverflow="extendDomain"
+                    label={{ value: `Median ${insideStats.median}°`, position: "insideBottomRight", fill: accent, fontSize: 11 }}
+                  />
+                  <ReferenceLine
+                    y={insideStats.min}
+                    stroke={accent}
+                    strokeDasharray="4 4"
+                    strokeOpacity={0.5}
+                    ifOverflow="extendDomain"
+                    label={{ value: `Min ${insideStats.min}°`, position: "bottom", fill: accent, fontSize: 11 }}
+                  />
+                </>
+              )}
             </LineChart>
           </ResponsiveContainer>
           {!hasOutside && (
