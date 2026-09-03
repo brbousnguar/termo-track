@@ -16,9 +16,9 @@ const WS_PROTOCOL = location.protocol === "https:" ? "wss" : "ws";
 const WS_URL = `${WS_PROTOCOL}://${location.host}/ws`;
 
 export default function App() {
-  const { reading, connected } = useWebSocket(WS_URL);
-  const [period, setPeriod] = useState<Period>({ mode: "recent", hours: 24 });
   const { refreshTick, refresh, refreshing } = useRefresh();
+  const { reading, connected } = useWebSocket(WS_URL, refreshTick);
+  const [period, setPeriod] = useState<Period>({ mode: "recent", hours: 24 });
   const { pullState, pullDistance } = usePullToRefresh(refresh);
 
   const theme = themeForReading(reading);

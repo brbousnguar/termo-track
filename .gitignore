@@ -16,6 +16,8 @@ backend/readings.db
 .playwright-mcp/
 
 # Test artifacts / screenshots
+dist/
+test-results/
 *.png
 !frontend/public/*.png
 !docs/branding/*.png
