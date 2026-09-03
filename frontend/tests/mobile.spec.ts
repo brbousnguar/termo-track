@@ -58,7 +58,7 @@ test.describe("Mobile UX", () => {
     await expect(page.locator(".logo-text")).toHaveText("Termo Track");
 
     // Time range buttons should be visible and tappable
-    const rangeBtns = page.locator(".range button");
+    const rangeBtns = page.locator(".range").last().locator("button");
     await expect(rangeBtns.first()).toBeVisible();
 
     // Refresh button should be visible
@@ -80,7 +80,7 @@ test.describe("Mobile UX", () => {
     await page.goto("/");
 
     // Tap each time range button
-    const rangeBtns = page.locator(".range button");
+    const rangeBtns = page.locator(".range").last().locator("button");
     const labels = ["6h", "24h", "2d", "7d"];
 
     for (let i = 0; i < labels.length; i++) {

@@ -84,7 +84,7 @@ test.describe("Smoke tests", () => {
     await expect(page.locator(".logo-text")).toHaveText("Termo Track");
 
     // Time range buttons
-    const rangeBtns = page.locator(".range button");
+    const rangeBtns = page.locator(".range").last().locator("button");
     await expect(rangeBtns).toHaveCount(4);
     await expect(rangeBtns.nth(1)).toHaveText("24h");
     await expect(rangeBtns.nth(1)).toHaveClass(/active/);
@@ -120,7 +120,7 @@ test.describe("Smoke tests", () => {
     await setupMocks(page);
     await page.goto("/");
 
-    const rangeBtns = page.locator(".range button");
+    const rangeBtns = page.locator(".range").last().locator("button");
     // Click 6h
     await rangeBtns.nth(0).click();
     await expect(rangeBtns.nth(0)).toHaveClass(/active/);
