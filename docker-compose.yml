@@ -22,8 +22,11 @@ services:
       DB_PATH: /data/readings.db
     volumes:
       - ./data:/data
-    expose:
-      - "8765"
+    # Host 8765 is already taken by an unrelated container (live-faceswap-web),
+    # so this maps to a different host port while keeping 8765 internal.
+    # See /brb-port-registry.
+    ports:
+      - "127.0.0.1:8694:8765"
     restart: unless-stopped
 
   frontend:
